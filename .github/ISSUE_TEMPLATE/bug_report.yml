@@ -1,0 +1,57 @@
+name: Bug report
+description: A statement converts wrongly, is skipped, or the tool crashes.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never attach a real statement or paste real account data.** Redact names,
+        addresses, account numbers and balances first (see CONTRIBUTING.md).
+  - type: input
+    id: version
+    attributes:
+      label: statement2csv version
+      description: Output of `statement2csv --version`.
+    validations:
+      required: true
+  - type: input
+    id: broker
+    attributes:
+      label: Broker and statement type
+      placeholder: "Fidelity monthly investment report (PDF)"
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Target format
+      options: [wealthfolio, ghostfolio]
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, and what happened instead?
+      description: Include any warnings printed to stderr.
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Redacted sample lines (optional)
+      description: The few statement rows involved, with all personal data replaced.
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I removed all personal and account data from everything I posted here.
+          required: true

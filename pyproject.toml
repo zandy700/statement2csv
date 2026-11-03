@@ -8,10 +8,15 @@ version = "0.1.0"
 description = "Convert broker PDF statements and CSV exports into Wealthfolio / Ghostfolio import CSVs. Fully offline."
 readme = "README.md"
 requires-python = ">=3.11"
-authors = [{ name = "statement2csv contributors" }]
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Xingjian Zhang" }]
 keywords = ["wealthfolio", "ghostfolio", "broker", "statement", "pdf", "csv", "portfolio"]
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Environment :: Console",
     "Topic :: Office/Business :: Financial :: Investment",
 ]
