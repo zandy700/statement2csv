@@ -288,3 +288,83 @@ def test_no_activities_is_an_error_and_writes_nothing(tmp_path: Path) -> None:
     assert result.exit_code == 1
     assert "no activities found" in result.output
     assert not out.exists()
+
+
+# --- spreadsheet and gains ----------------------------------------------------------
+
+SPREADSHEET_HEADER = [
+    "date", "broker", "account", "type", "symbol", "description", "quantity", "price",
+    "amount", "fees", "currency",
+]  # fmt: skip
+BROKER_NAMES = {"fidelity": "Fidelity", "schwab": "Charles Schwab", "robinhood": "Robinhood"}
+
+
+@pytest.mark.parametrize("fmt_name", ["spreadsheet", "csv"])
+def test_spreadsheet_keeps_every_activity(fixture: str, fmt_name: str, tmp_path: Path) -> None:
+    out = tmp_path / "s.csv"
+    result = convert(fixture, fmt_name, out)
+    assert result.exit_code == 0, result.output
+    assert out.read_text(encoding="utf-8").splitlines()[0] == ",".join(SPREADSHEET_HEADER)
+    rows = read_rows(out)
+    assert len(rows) == TOTALS[fixture]
+    assert {r["broker"] for r in rows} == {BROKER_NAMES[fixture]}
+    assert [r["date"] for r in rows] == sorted(r["date"] for r in rows)
+    for r in rows:
+        amount = Decimal(r["amount"]) if r["amount"] else None
+        if r["type"] in ("Buy", "Withdrawal", "Fee", "Tax"):
+            assert amount is not None and amount < 0, r
+        elif r["type"] in ("Sell", "Deposit", "Dividend", "Interest"):
+            assert amount is not None and amount > 0, r
+        if r["type"] == "Sell":
+            assert Decimal(r["quantity"]) < 0
+        if r["type"] not in ("Buy", "Sell"):
+            assert r["quantity"] == "" and r["price"] == ""
+
+
+def test_spreadsheet_spot_row(tmp_path: Path) -> None:
+    out = tmp_path / "s.csv"
+    assert convert("robinhood", "spreadsheet", out).exit_code == 0
+    row = find(read_rows(out), date="2024-03-22", symbol="MSFT")
+    assert (row["type"], row["quantity"], row["price"], row["amount"], row["fees"]) == (
+        "Sell", "-20", "425.2", "8503.79", "0.21",
+    )  # fmt: skip
+
+
+GAINS = {
+    "robinhood": [
+        {"description": "30 sh. AAPL", "date_acquired": "2024-01-10", "date_sold": "2024-02-20",
+         "proceeds": "5469.18", "cost_basis": "5565.00", "gain_loss": "-95.82", "term": "short"},
+        {"description": "20 sh. MSFT", "date_acquired": "2024-01-12", "date_sold": "2024-03-22",
+         "proceeds": "8503.79", "cost_basis": "7769.40", "gain_loss": "734.39", "term": "short"},
+    ],
+    "fidelity": [
+        # MSFT was bought before this statement: no basis, flagged.
+        {"description": "8.25 sh. MSFT", "date_acquired": "", "date_sold": "2024-02-09",
+         "proceeds": "3096.98", "cost_basis": "", "gain_loss": "", "term": "unknown"},
+        # 4 of the 10.5 shares bought for 1949.55 (fee included): 742.685... -> 742.69
+        {"description": "4 sh. AAPL", "date_acquired": "2024-02-02", "date_sold": "2024-02-20",
+         "proceeds": "760.38", "cost_basis": "742.69", "gain_loss": "17.69", "term": "short"},
+    ],
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("fixture_name", sorted(GAINS))
+def test_gains_report(fixture_name: str, tmp_path: Path) -> None:
+    out = tmp_path / "g.csv"
+    result = convert(fixture_name, "gains", out)
+    assert result.exit_code == 0, result.output
+    assert read_rows(out) == GAINS[fixture_name]
+    assert "Realized gains (FIFO):" in result.output
+    assert "Not tax advice" in result.output
+    no_basis = "8.25 shares have no cost basis" in result.output
+    assert no_basis == (fixture_name == "fidelity")
+
+
+def test_gains_xlsx(tmp_path: Path) -> None:
+    openpyxl = pytest.importorskip("openpyxl")
+    out = tmp_path / "g.xlsx"
+    result = convert("robinhood", "gains", out, "--xlsx")
+    assert result.exit_code == 0, result.output
+    wb = openpyxl.load_workbook(out)
+    assert wb.worksheets[0].max_row == 3
+    assert "Summary" in wb.sheetnames
