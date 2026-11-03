@@ -1,0 +1,22 @@
+# Environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Real statements must never be committed. Only synthetic fixtures are allowed.
+*.pdf
+*.PDF
+!tests/fixtures/**/*.pdf
+real-data/
