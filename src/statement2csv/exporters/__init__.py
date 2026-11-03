@@ -8,12 +8,14 @@ from statement2csv.exporters.base import (
     Table,
     fmt_decimal,
 )
+from statement2csv.exporters.gains import GainsExporter
 from statement2csv.exporters.ghostfolio import GhostfolioExporter
 from statement2csv.exporters.spreadsheet import SpreadsheetExporter
 from statement2csv.exporters.wealthfolio import WealthfolioExporter
 
 EXPORTERS: dict[str, type[Exporter]] = {
-    cls.name: cls for cls in (WealthfolioExporter, GhostfolioExporter, SpreadsheetExporter)
+    cls.name: cls
+    for cls in (WealthfolioExporter, GhostfolioExporter, SpreadsheetExporter, GainsExporter)
 }
 #: Alternative ``--format`` names, e.g. ``csv`` for ``spreadsheet``.
 ALIASES: dict[str, str] = {alias: cls.name for cls in EXPORTERS.values() for alias in cls.aliases}
@@ -35,6 +37,7 @@ __all__ = [
     "XLSX_INSTALL_HINT",
     "ExportResult",
     "Exporter",
+    "GainsExporter",
     "GhostfolioExporter",
     "Skipped",
     "SpreadsheetExporter",
