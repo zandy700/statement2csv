@@ -15,8 +15,12 @@ dist/
 .coverage
 htmlcov/
 
-# Real statements must never be committed. Only synthetic fixtures are allowed.
+# Real statements (PDFs, broker CSV exports) and converted output must never be
+# committed. Only synthetic fixtures are allowed.
 *.pdf
 *.PDF
+*.csv
+*.CSV
 !tests/fixtures/**/*.pdf
+!tests/fixtures/**/*.csv
 real-data/

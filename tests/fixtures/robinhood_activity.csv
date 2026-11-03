@@ -1,0 +1,34 @@
+"Activity Date","Process Date","Settle Date","Instrument","Description","Trans Code","Quantity","Price","Amount"
+"6/10/2024","6/10/2024","6/10/2024","NVDA","NVIDIA
+CUSIP: 67066G104
+Forward Split","SPL","45S","",""
+"5/1/2024","5/1/2024","5/1/2024","","Gold Deposit Boost Payment","GDBP","","","$30.00"
+"4/30/2024","4/30/2024","4/30/2024","","Interest Payment","INT","","","$12.34"
+"4/11/2024","4/11/2024","4/11/2024","TSM","Taiwan Semiconductor Manufacturing
+CUSIP: 874039100
+Cash Div: R/D 2024-03-14 P/D 2024-04-11 - 15 shares at 0.4407","CDIV","","","$6.61"
+"4/11/2024","4/11/2024","4/11/2024","TSM","Dividend Tax Withholding
+Taiwan Semiconductor Manufacturing","DTAX","","","($1.39)"
+"4/11/2024","4/11/2024","4/11/2024","TSM","ADR Fee
+Taiwan Semiconductor Manufacturing","AFEE","","","($0.15)"
+"4/8/2024","4/8/2024","4/8/2024","","Stock Lending Income","SLIP","","","$0.87"
+"3/28/2024","3/28/2024","3/28/2024","","Gold Subscription Fee","GOLD","","","($5.00)"
+"3/27/2024","3/27/2024","3/28/2024","SPY","SPY 4/19/2024 Call $520.00","BTO","1","$3.45","($345.00)"
+"3/22/2024","3/22/2024","3/26/2024","MSFT","Microsoft
+CUSIP: 594918104","Sell","20","$425.20","$8,503.79"
+"3/15/2024","3/15/2024","3/15/2024","","ACH Withdrawal","ACH","","","($2,500.00)"
+"3/14/2024","3/14/2024","3/14/2024","MSFT","Cash Div: R/D 2024-02-15 P/D 2024-03-14 - 20 shares at 0.75","CDIV","","","$15.00"
+"2/20/2024","2/20/2024","2/22/2024","AAPL","Apple
+CUSIP: 037833100","Sell","30","$182.31","$5,469.18"
+"2/15/2024","2/15/2024","2/15/2024","AAPL","Cash Div: R/D 2024-02-12 P/D 2024-02-15 - 40 shares at 0.24","CDIV","","","$9.60"
+"2/2/2024","2/2/2024","2/6/2024","VOO","Vanguard S&P 500 ETF
+CUSIP: 922908363","Buy","0.523164","$448.05","($234.40)"
+"1/16/2024","1/16/2024","1/18/2024","SPY","SPDR S&P 500 ETF Trust
+CUSIP: 78462F103","Buy","25","$472.65","($11,816.25)"
+"1/12/2024","1/12/2024","1/17/2024","MSFT","Microsoft
+CUSIP: 594918104","Buy","20","$388.47","($7,769.40)"
+"1/10/2024","1/10/2024","1/12/2024","AAPL","Apple
+CUSIP: 037833100","Buy","40","$185.50","($7,420.00)"
+"1/8/2024","1/8/2024","1/8/2024","","ACH Deposit","ACH","","","$30,000.00"
+
+"","","","","","","","","The data provided is for informational purposes only. Please consult a professional tax service or personal tax advisor if you need instructions on how to calculate cost basis and other tax-related information."

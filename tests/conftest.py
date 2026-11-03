@@ -54,3 +54,21 @@ def dummy_statement(tmp_path: Path) -> Path:
     path = tmp_path / "statement.txt"
     path.write_text("DUMMY BROKER\n", encoding="utf-8")
     return path
+
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture
+def fidelity_pdf() -> Path:
+    return FIXTURES_DIR / "fidelity_statement.pdf"
+
+
+@pytest.fixture
+def schwab_pdf() -> Path:
+    return FIXTURES_DIR / "schwab_statement.pdf"
+
+
+@pytest.fixture
+def robinhood_csv() -> Path:
+    return FIXTURES_DIR / "robinhood_activity.csv"

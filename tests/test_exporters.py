@@ -132,3 +132,71 @@ def test_activity_rejects_negative_and_missing_fields() -> None:
         Activity(date=dt.date(2024, 1, 1), activity_type="DEPOSIT", amount=-1, currency="USD")
     with pytest.raises(ValueError, match="missing"):
         Activity(date=dt.date(2024, 1, 1), activity_type="BUY", symbol="X", currency="USD")
+
+
+def test_trade_with_broker_total_and_fee_only_fee_and_per_share_dividend() -> None:
+    activities = [
+        Activity(
+            date=dt.date(2024, 1, 2),
+            symbol="AAPL",
+            activity_type=ActivityType.BUY,
+            quantity=D(10),
+            unit_price=D("185.20"),
+            fee=D("4.95"),
+            amount=D("1856.95"),
+            currency="USD",
+        ),
+        Activity(
+            date=dt.date(2024, 1, 3),
+            activity_type=ActivityType.FEE,
+            fee=D("2.50"),
+            currency="USD",
+        ),
+        Activity(
+            date=dt.date(2024, 1, 4),
+            symbol="MSFT",
+            activity_type=ActivityType.DIVIDEND,
+            quantity=D(5),
+            unit_price=D("0.62"),
+            currency="USD",
+        ),
+    ]
+    wf, _ = export(WealthfolioExporter(), activities)
+    assert wf.splitlines()[1:] == [
+        # Broker total kept as the final amount (already includes the fee).
+        "2024-01-02,AAPL,10,BUY,185.2,USD,4.95,1856.95,",
+        # Fee-only FEE: the fee becomes the amount and isn't reported twice.
+        "2024-01-03,,,FEE,,USD,0,2.5,",
+        # Per-share dividend: amount derived from quantity x price.
+        "2024-01-04,MSFT,5,DIVIDEND,0.62,USD,0,3.1,",
+    ]
+    gf, _ = export(GhostfolioExporter(), activities)
+    assert gf.splitlines()[1:] == [
+        "2024-01-02,AAPL,,USD,185.2,10,buy,4.95,",
+        "2024-01-03,Fee,MANUAL,USD,0,0,fee,2.5,",
+        "2024-01-04,MSFT,,USD,0.62,5,dividend,0,",
+    ]
+
+
+def test_same_day_order_is_preserved() -> None:
+    buy = Activity(
+        date=dt.date(2024, 3, 5),
+        symbol="AAPL",
+        activity_type=ActivityType.BUY,
+        quantity=D(5),
+        unit_price=D(200),
+        currency="USD",
+    )
+    sell = Activity(
+        date=dt.date(2024, 3, 5),
+        symbol="AAPL",
+        activity_type=ActivityType.SELL,
+        quantity=D(5),
+        unit_price=D(210),
+        currency="USD",
+    )
+    earlier = Activity(
+        date=dt.date(2024, 3, 1), activity_type=ActivityType.DEPOSIT, amount=D(1), currency="USD"
+    )
+    text, _ = export(WealthfolioExporter(), [buy, sell, earlier])
+    assert [line.split(",")[3] for line in text.splitlines()[1:]] == ["DEPOSIT", "BUY", "SELL"]
