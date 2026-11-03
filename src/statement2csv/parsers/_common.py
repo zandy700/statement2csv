@@ -107,6 +107,13 @@ def resolve_month_day(text: str, period_start: dt.date, period_end: dt.date) -> 
     return min(candidates, key=lambda d: abs(d - mid))
 
 
+def resolve_statement_date(text: str, period_start: dt.date, period_end: dt.date) -> dt.date:
+    """A statement date cell: ``MM/DD/YYYY`` (year kept as printed) or year-less ``MM/DD``."""
+    if text.count("/") == 2:
+        return parse_us_date(text)
+    return resolve_month_day(text, period_start, period_end)
+
+
 def pdf_pages_text(path: Path, max_pages: int | None = None) -> list[str]:
     """Extract text from each page of a PDF (layout-insensitive, line-ordered)."""
     import pdfplumber

@@ -46,7 +46,7 @@ from statement2csv.parsers._common import (
     pdf_first_page_text,
     pdf_pages_text,
     pdf_words,
-    resolve_month_day,
+    resolve_statement_date,
 )
 from statement2csv.parsers.base import BrokerParser, ParserError
 
@@ -264,7 +264,16 @@ def _extract_rows(pages_words: list[list[PdfWord]]) -> tuple[bool, list[_Row]]:
                 has_numbers = any(cells.get(c) for c in _NUM_COLUMNS)
                 if has_date or has_numbers or cells.get("category"):
                     if cells.get("date") and not has_date:
-                        break  # some other text in the Date column: end of table
+                        # Some other text in the Date column: end of table. If the line
+                        # carries amounts it's probably a transaction with an unreadable
+                        # date; say so instead of silently dropping it and what follows.
+                        if has_numbers:
+                            warnings.warn(
+                                "Schwab: unreadable date, rest of the table on page "
+                                f"{page_no} skipped from: {line.text}",
+                                stacklevel=2,
+                            )
+                        break
                     rows.append(_Row(page_no, cells))
                 elif (
                     rows
@@ -397,7 +406,7 @@ class SchwabParser(BrokerParser):
             try:
                 if date_text:
                     last_date = None  # don't attach this row to the previous date
-                    last_date = resolve_month_day(date_text, *period)
+                    last_date = resolve_statement_date(date_text, *period)
                 if last_date is None:
                     raise ValueError("no date")
                 activity = self._to_activity(row, last_date, last_category)

@@ -211,7 +211,7 @@ Date,Code,DataSource,Currency,Price,Quantity,Action,Fee,Note
 2024-01-15,AAPL,,USD,185.5,10,buy,4.95,Initial purchase
 2024-02-01,AAPL,,USD,0.24,10,dividend,0,Q4 dividend
 2024-04-01,Interest,MANUAL,USD,12.5,1,interest,0,
-2024-04-15,Account fee,MANUAL,USD,0,0,fee,25,
+2024-04-15,Fee,MANUAL,USD,0,0,fee,25,Account fee
 ```
 
 Mapping from our model:
@@ -219,7 +219,7 @@ Mapping from our model:
 | Activity type | Ghostfolio row |
 | ------------- | -------------- |
 | BUY / SELL    | `buy`/`sell`, Code=symbol, DataSource blank, Price=unit_price, Quantity=quantity, Fee=fee |
-| DIVIDEND      | `dividend`. If quantity and unit_price are known: use them. Otherwise Quantity=1, Price=amount. Fee=fee. |
+| DIVIDEND      | `dividend`. If quantity and unit_price are known and quantity × unit_price equals amount (or amount is missing): use them. Otherwise Quantity=1, Price=amount. Fee=fee. |
 | INTEREST      | `interest`, DataSource `MANUAL`, Code=symbol or `Interest`, Quantity=1, Price=amount |
 | FEE           | `fee`, DataSource `MANUAL`, Code=symbol or `Fee`, Price=0, Quantity=0, Fee=amount (falls back to `fee` if amount is missing) |
 | TAX           | **exported as `fee`** (no tax type in Ghostfolio), Code=symbol or `Tax`, comment prefixed `Tax`. This is our choice, not an upstream convention. |

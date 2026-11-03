@@ -200,3 +200,33 @@ def test_same_day_order_is_preserved() -> None:
     )
     text, _ = export(WealthfolioExporter(), [buy, sell, earlier])
     assert [line.split(",")[3] for line in text.splitlines()[1:]] == ["DEPOSIT", "BUY", "SELL"]
+
+
+def test_ghostfolio_dividend_uses_amount_when_it_differs_from_qty_x_price() -> None:
+    # amount is the final cash total (here net of withholding). Ghostfolio must book the
+    # same 2.04 Wealthfolio gets, not the 10 x 0.24 = 2.40 gross.
+    net = Activity(
+        date=dt.date(2024, 1, 1),
+        symbol="AAPL",
+        activity_type=ActivityType.DIVIDEND,
+        quantity=D(10),
+        unit_price=D("0.24"),
+        amount=D("2.04"),
+        currency="USD",
+    )
+    matching = Activity(
+        date=dt.date(2024, 1, 2),
+        symbol="AAPL",
+        activity_type=ActivityType.DIVIDEND,
+        quantity=D(10),
+        unit_price=D("0.24"),
+        amount=D("2.40"),
+        currency="USD",
+    )
+    wf, _ = export(WealthfolioExporter(), [net])
+    assert wf.splitlines()[1] == "2024-01-01,AAPL,10,DIVIDEND,0.24,USD,0,2.04,"
+    gf, _ = export(GhostfolioExporter(), [net, matching])
+    assert gf.splitlines()[1:] == [
+        "2024-01-01,AAPL,,USD,2.04,1,dividend,0,",
+        "2024-01-02,AAPL,,USD,0.24,10,dividend,0,",
+    ]

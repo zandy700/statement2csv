@@ -13,6 +13,7 @@ from statement2csv.parsers._common import (
     parse_us_date,
     reconcile_unit_price,
     resolve_month_day,
+    resolve_statement_date,
 )
 
 
@@ -181,3 +182,10 @@ def test_reconcile_unit_price_needs_price_or_amount() -> None:
 )
 def test_cash_sign_matches(kind: ActivityType, amount: Decimal, expected: bool) -> None:
     assert cash_sign_matches(kind, amount) is expected
+
+
+def test_resolve_statement_date_keeps_explicit_year() -> None:
+    start, end = dt.date(2024, 1, 1), dt.date(2024, 1, 31)
+    assert resolve_statement_date("12/29/2022", start, end) == dt.date(2022, 12, 29)
+    assert resolve_statement_date("12/29/22", start, end) == dt.date(2022, 12, 29)
+    assert resolve_statement_date("01/15", start, end) == dt.date(2024, 1, 15)

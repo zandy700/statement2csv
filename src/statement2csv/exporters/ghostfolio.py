@@ -56,7 +56,10 @@ class GhostfolioExporter(Exporter):
             price, quantity = activity.unit_price, activity.quantity
         elif t is ActivityType.DIVIDEND:
             action = "dividend"
-            if activity.quantity and activity.unit_price is not None:
+            gross = activity.gross_value
+            # Per-share form only when it gives the same cash total as ``amount``
+            # (e.g. not when amount is net of withholding).
+            if activity.quantity and gross is not None and activity.amount in (None, gross):
                 price, quantity = activity.unit_price, activity.quantity
             else:
                 price, quantity = activity.cash_amount, ONE

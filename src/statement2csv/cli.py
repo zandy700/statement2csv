@@ -70,7 +70,8 @@ def convert(
 ) -> None:
     """Convert INPUT into an importable CSV."""
     try:
-        parser = detect_parser(input_path) if broker == "auto" else get_parser(broker)
+        auto = broker.strip().lower() == "auto"
+        parser = detect_parser(input_path) if auto else get_parser(broker.strip())
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             activities = parser.parse(input_path)

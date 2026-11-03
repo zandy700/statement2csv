@@ -404,3 +404,19 @@ def test_split_with_parsable_ratio(tmp_path: Path, description: str, ratio: Deci
 def test_split_without_symbol_is_skipped(tmp_path: Path) -> None:
     activities, messages = parse_one(tmp_path, row("SPR", desc="1 for 10"))
     assert activities == [] and len(messages) == 1
+
+
+@pytest.mark.parametrize("code", ["ACH", "INT", "MINT", "CDIV", "GOLD"])
+def test_zero_amount_cash_row_is_skipped_with_warning(tmp_path: Path, code: str) -> None:
+    # A $0.00 row would otherwise become a zero DEPOSIT/INTEREST/... activity.
+    activities, messages = parse_one(tmp_path, row(code, "$0.00", symbol="AAPL"))
+    assert activities == []
+    assert len(messages) == 1 and "zero amount" in messages[0] and code in messages[0]
+
+
+def test_zero_quantity_trade_is_skipped_with_warning(tmp_path: Path) -> None:
+    activities, messages = parse_one(
+        tmp_path, row("Buy", "$0.00", symbol="AAPL", qty="0", price="$185.00")
+    )
+    assert activities == []
+    assert len(messages) == 1 and "zero Quantity" in messages[0]

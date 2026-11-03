@@ -201,3 +201,42 @@ def test_fidelity_options_skipped_and_bond_price_per_100_normalized(tmp_path):
     assert (apple.activity_type, apple.unit_price) == (T.BUY, D(185))
     option_warnings = [m for m in messages if "option" in m]
     assert len(option_warnings) == 1 and "PUT (AAPL)" in option_warnings[0]
+
+
+def test_schwab_date_with_year_keeps_the_printed_year(tmp_path):
+    # A full MM/DD/YYYY date must not be re-guessed from the statement period
+    # (January 2024): 12/29/2022 used to come out as 2023-12-29.
+    activities, messages = schwab(
+        tmp_path,
+        [
+            # Category left blank: the synthetic Date column is too narrow for a
+            # 10-character date, which would run into the Category text.
+            _schwab_row("12/29/2022", "", "Cash Dividend", "VTI", "VANGUARD",
+                        amount="45.67"),
+            _schwab_row("01/16", "Dividend", "Cash Dividend", "VNQ", "VANGUARD REIT",
+                        amount="12.34"),
+        ],
+    )  # fmt: skip
+    assert messages == []
+    assert [(a.symbol, a.date.isoformat()) for a in activities] == [
+        ("VTI", "2022-12-29"),
+        ("VNQ", "2024-01-16"),
+    ]
+
+
+def test_schwab_unreadable_date_warns_instead_of_silently_ending_the_table(tmp_path):
+    # Text in the Date column ends the table. When that line has amounts it's a lost
+    # transaction (and every row after it on the page), so it must not be silent.
+    activities, messages = schwab(
+        tmp_path,
+        [
+            _schwab_row("01/05", "Purchase", "Buy", "AAPL", "APPLE INC",
+                        "1.0000", "185.0000", "", "(185.00)"),
+            _schwab_row("N/A", "", "Cash Dividend", "VTI", "VANGUARD", amount="45.67"),
+            _schwab_row("01/16", "Dividend", "Cash Dividend", "VNQ", "VANGUARD REIT",
+                        amount="12.34"),
+        ],
+    )  # fmt: skip
+    assert [a.symbol for a in activities] == ["AAPL"]
+    assert len(messages) == 1
+    assert "unreadable date" in messages[0] and "N/A" in messages[0]

@@ -44,7 +44,8 @@ journals / internal transfers (JNLC, JNLS, ITRF), ACATS transfers, trade
 cancellations (BCXL, SCXL), corporate actions without cash/price data (REC, SXCH,
 MRGS, MRGC, SOFF, CIL, ...) and any unknown code. Income codes with a negative amount
 (reversals) and fee/tax codes with a positive amount (refunds) are skipped too, because
-the model can't express the reversed direction.
+the model can't express the reversed direction. Cash rows with a zero amount and trades
+with a zero quantity are skipped (as in the PDF parsers).
 
 Fees on trades: Robinhood charges no commission, but sells carry regulatory (SEC/TAF)
 fees netted into ``Amount``. ``amount`` is always the broker's cash total. For sells,
@@ -335,6 +336,8 @@ class _Row:
             raise self.error("trade without Instrument")
         if quantity is None:
             raise self.error("trade without Quantity")
+        if quantity == 0:
+            raise self.error("trade with zero Quantity")
         if price is None:
             raise self.error("trade without Price")
         price = abs(price)
@@ -373,6 +376,9 @@ class _Row:
 
     def _cash(self, date: dt.date, code: str) -> Activity | None:
         amount = self._require_amount()
+        if amount == 0:
+            self.skip(f"zero amount on {code}")
+            return None
         if code in _SIGNED_CODES:
             positive, negative = _SIGNED_CODES[code]
             activity_type = positive if amount >= 0 else negative

@@ -61,7 +61,7 @@ from statement2csv.parsers._common import (
     pdf_first_page_text,
     pdf_pages_text,
     pdf_words,
-    resolve_month_day,
+    resolve_statement_date,
 )
 from statement2csv.parsers.base import BrokerParser, ParserError
 
@@ -529,12 +529,7 @@ class FidelityParser(BrokerParser):
                 )
                 continue
             try:
-                date_text = row.text("date")
-                date = (
-                    parse_us_date(date_text)
-                    if date_text.count("/") == 2
-                    else resolve_month_day(date_text, *period)
-                )
+                date = resolve_statement_date(row.text("date"), *period)
                 activity = self._to_activity(row, date)
             except (ValueError, TypeError) as exc:
                 warnings.warn(f"Fidelity: skipping row ({exc}): {row.describe()}", stacklevel=2)

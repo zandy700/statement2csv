@@ -28,3 +28,12 @@ def test_convert_unknown_broker(dummy_statement: Path) -> None:
     result = runner.invoke(app, ["convert", str(dummy_statement), "--broker", "nope"])
     assert result.exit_code == 1
     assert "unknown broker" in result.output
+
+
+def test_convert_auto_is_case_insensitive(
+    dummy_parser, dummy_statement: Path, tmp_path: Path
+) -> None:
+    out = tmp_path / "out.csv"
+    result = runner.invoke(app, ["convert", str(dummy_statement), "-b", "AUTO", "-o", str(out)])
+    assert result.exit_code == 0, result.output
+    assert out.exists()
