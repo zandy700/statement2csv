@@ -5,13 +5,16 @@ build-backend = "hatchling.build"
 [project]
 name = "statement2csv"
 version = "0.1.0"
-description = "Convert broker PDF statements and CSV exports into Wealthfolio / Ghostfolio import CSVs. Fully offline."
+description = "Turn broker statements (PDF or CSV) into clean data for spreadsheets, taxes, and portfolio trackers like Wealthfolio and Ghostfolio. Fully offline."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Xingjian Zhang" }]
-keywords = ["wealthfolio", "ghostfolio", "broker", "statement", "pdf", "csv", "portfolio"]
+keywords = [
+    "wealthfolio", "ghostfolio", "broker", "statement", "pdf", "csv", "portfolio",
+    "spreadsheet", "excel", "capital-gains", "fifo", "form-8949",
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -26,10 +29,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+xlsx = ["openpyxl>=3.1"]
 dev = [
     "pytest>=8",
     "ruff>=0.6",
     "reportlab>=4",
+    "openpyxl>=3.1",
 ]
 
 [project.scripts]

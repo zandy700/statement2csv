@@ -21,6 +21,8 @@ htmlcov/
 *.PDF
 *.csv
 *.CSV
+*.xlsx
+*.XLSX
 !tests/fixtures/**/*.pdf
 !tests/fixtures/**/*.csv
 real-data/
