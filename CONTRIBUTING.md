@@ -31,13 +31,12 @@ When reporting a problem or requesting a broker, share only the structure:
 Python 3.11 or newer.
 
 ```sh
-git clone https://github.com/OWNER/REPO.git
-cd REPO
-python -m venv .venv
-.venv/bin/pip install -e '.[dev]'
+git clone https://github.com/zandy700/statement2csv.git
+cd statement2csv
+uv venv && uv pip install -e '.[dev]'
 ```
 
-(`uv venv && uv pip install -e '.[dev]'` works too.) The `dev` extra installs pytest,
+Without uv: `python -m venv .venv && .venv/bin/pip install -e '.[dev]'`. The `dev` extra installs pytest,
 ruff and reportlab, which the PDF fixture generators use.
 
 ## Tests and linting
@@ -83,22 +82,41 @@ CI runs the same three commands on Python 3.11, 3.12 and 3.13.
    a generator, `tests/fixtures/generate_<broker>.py`, using reportlab. The existing
    `generate_fidelity.py` and `generate_schwab.py` are good models. Run it with
    `.venv/bin/python tests/fixtures/generate_<broker>.py` and commit both the script
-   and the PDF. For a CSV export, a small hand-written file such as
+   and the PDF. Create the canvas with `invariant=1` so the output is deterministic
+   and regenerating gives a byte-identical file. For a CSV export, a small hand-written file such as
    `robinhood_activity.csv` is enough. Make it cover buys, sells, dividends, interest,
    fees, deposits and rows you intend to skip.
 
 4. **Fixture path.** Add a pytest fixture for it in `tests/conftest.py`, as for the
-   existing brokers.
+   existing brokers (`fidelity_pdf`-style fixtures pointing into `tests/fixtures/`).
 
 5. **Tests.** Add `tests/test_parser_<broker>.py`: assert the exact activities parsed
    from the fixture, that `detect` accepts it and rejects other brokers' fixtures, and
-   that unsupported rows produce warnings. Also check `tests/test_detection.py` to see
-   that auto-detection still picks exactly one parser.
+   that unsupported rows produce warnings. Then update the shared test modules:
+
+   - `tests/test_detection.py`: add the fixture to `FIXTURE_FILES` and the parser to
+     `PARSERS`, so the detect matrix proves the new parser accepts only its own file
+     and the others do not accept it.
+   - `tests/test_cli_e2e.py`: add the fixture to `FIXTURE_FILES`, and its activity
+     count and number of deposits, withdrawals and splits to `TOTALS` and
+     `CASH_MOVEMENTS`. The parametrized tests then run it through both exporters.
 
 6. **Docs.** Add the broker to the table in `README.md` and to the changelog under
    "Unreleased".
 
 7. Run the tests and linters, then open a pull request using the template.
+
+## Conventions
+
+- Quantities, prices, fees and amounts are non-negative `Decimal`s. The activity type
+  gives the direction. Never use floats for money.
+- `amount` is the final cash total of the activity, fees and taxes included.
+- Warn and skip rather than guess. If a row is ambiguous (unknown transaction type,
+  options, reversals), call `warnings.warn(...)` naming the row and leave it out.
+- `detect()` must never raise and must not match other brokers' files. Check for
+  text that is specific to the broker, not for generic words like "Statement".
+- Keep parsers offline: no network access, no telemetry.
+- Code is formatted with `ruff format`, line length 100.
 
 ## Pull requests
 

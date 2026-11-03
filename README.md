@@ -1,6 +1,6 @@
 # statement2csv
 
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+[![CI](https://github.com/zandy700/statement2csv/actions/workflows/ci.yml/badge.svg)](https://github.com/zandy700/statement2csv/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Convert broker PDF statements and CSV exports into CSV files you can import into
@@ -18,8 +18,9 @@ format the target app expects.
 
 Your statements contain account numbers, names and your whole financial history.
 statement2csv runs **fully offline**: it reads the file you give it and writes a CSV
-to disk (or stdout). It does not make network requests, upload anything or send
-telemetry.
+to disk (or stdout). The source (`src/`) imports no network libraries, makes no
+network requests, uploads nothing and sends no telemetry. Installing the package
+downloads its dependencies, as any `pip` install does; running it does not.
 
 <!-- Demo: add an asciinema recording or GIF here, e.g.
      [![asciicast](https://asciinema.org/a/XXXX.svg)](https://asciinema.org/a/XXXX) -->
@@ -29,8 +30,8 @@ telemetry.
 Requires Python 3.11 or newer. The package is not on PyPI yet, so install from a clone.
 
 ```sh
-git clone https://github.com/OWNER/REPO.git
-cd REPO
+git clone https://github.com/zandy700/statement2csv.git
+cd statement2csv
 
 # pipx
 pipx install .
@@ -70,7 +71,9 @@ Options of `convert`:
 | `--output`, `-o` | Output path, or `-` for stdout. Default: the input name with a `.<format>.csv` suffix. |
 
 Rows that cannot be converted are skipped, and a warning for each one is printed to
-stderr. Read them: they tell you what is missing from the CSV.
+stderr. Read them: they tell you what is missing from the CSV. The command exits with
+code 1, and writes no file, if the broker cannot be detected, the file cannot be parsed
+or it contains no activities. `statement2csv --version` prints the version.
 
 ## Supported brokers
 
@@ -101,10 +104,17 @@ Always review the import preview in the target app before confirming.
   **synthetic** statements (`tests/fixtures/`), not real ones. Real statements may
   differ, so check your first conversion against the original.
 - Option trades, reversals and unknown transaction types are skipped with a warning.
+- Each statement is treated as a single account. The parsers do not read account
+  numbers and the output has no `account` column, so convert one account per file.
+- Schwab's older split layout ("Transaction Detail - Purchases & Sales", ...) is not
+  supported.
+- Robinhood splits are converted only when the description states a ratio
+  (for example "2 for 1"); otherwise they are skipped.
+- Amounts are assumed to be in USD; all three parsers write `USD`.
 - Only the broker's reported activity is converted; there is no portfolio
   reconciliation.
 - If a statement fails or converts wrongly, please
-  [open an issue](https://github.com/OWNER/REPO/issues/new/choose) with a **redacted**
+  [open an issue](https://github.com/zandy700/statement2csv/issues/new/choose) with a **redacted**
   sample. Remove names, addresses and account numbers, and change the amounts.
   Never post a real statement. See [CONTRIBUTING.md](CONTRIBUTING.md#redacting-samples).
 
