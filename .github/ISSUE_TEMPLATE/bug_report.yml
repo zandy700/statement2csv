@@ -25,7 +25,7 @@ body:
     id: format
     attributes:
       label: Target format
-      options: [wealthfolio, ghostfolio]
+      options: [wealthfolio, ghostfolio, spreadsheet, gains]
     validations:
       required: true
   - type: textarea

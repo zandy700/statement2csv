@@ -1,7 +1,13 @@
-# Target CSV import formats
+# Output formats
 
-This document records what statement2csv must output for each target app, and why.
-It was researched on **2026-11-03** from the source code and docs of both projects.
+This document records what statement2csv writes for each output format, and why.
+
+- [Spreadsheet](#spreadsheet) (`spreadsheet`, alias `csv`): our own universal layout.
+- [Gains](#gains) (`gains`): realized capital gains, Form 8949-style.
+- [Wealthfolio](#wealthfolio) and [Ghostfolio](#ghostfolio): the apps' import formats.
+
+The import formats were researched on **2026-11-03** from the source code and docs of
+both projects.
 
 | App         | Version checked                          | Commit                                     |
 | ----------- | ---------------------------------------- | ------------------------------------------ |
@@ -10,6 +16,116 @@ It was researched on **2026-11-03** from the source code and docs of both projec
 
 Both apps change their importers often. When upgrading, re-check the sources listed
 at the end of each section.
+
+---
+
+## Spreadsheet
+
+`--format spreadsheet` (or `csv`). A layout of our own, for people rather than an
+importer: Excel, Google Sheets, Numbers, LibreOffice, pandas. With `--xlsx` the same
+table is written as an Excel workbook (needs the `xlsx` extra).
+
+| Column        | Contents |
+| ------------- | -------- |
+| `date`        | ISO `YYYY-MM-DD` (a real date cell in XLSX). Rows are sorted by date; same-day rows keep the statement order. |
+| `broker`      | Display name of the parser, e.g. `Charles Schwab`. |
+| `account`     | Account name if the parser provides one, else blank. Always present so the columns don't move. |
+| `type`        | `Buy`, `Sell`, `Dividend`, `Interest`, `Fee`, `Tax`, `Deposit`, `Withdrawal`, `Split`. |
+| `symbol`      | Ticker or CUSIP, blank for pure cash rows. |
+| `description` | The broker's description. If there is none: `N-for-1 split` for splits, `Q shares x P` for per-share dividends. |
+| `quantity`    | **Signed** change in shares: positive for buys, negative for sells. Blank on every other type. |
+| `price`       | Price per share for buys and sells, blank otherwise. |
+| `amount`      | **Signed** cash effect, fees included: negative for buys (total paid), withdrawals, fees and taxes; positive for sells (net proceeds), deposits, dividends and interest. The broker's own total is used when the statement has one, else quantity × price ± fee. Blank for splits (the ratio is not cash). |
+| `fees`        | Commission/fees of the activity, already included in `amount` (do not subtract them again). On `Fee` rows it is the fee itself, so the column totals all fees paid. |
+| `currency`    | ISO 4217 code. |
+
+Why signed: in a spreadsheet the useful operations are `SUM(amount)` (net cash flow) and
+a pivot of `SUM(quantity)` by symbol (net shares bought; splits are not applied). The
+import formats keep everything positive because the apps want that; this one does not
+feed an importer.
+
+Numbers are written in plain notation (`1859.95`, no thousands separators, no currency
+symbol) so every spreadsheet locale parses them. XLSX cells use the `#,##0.00` format for
+`amount` and `fees`; the header row is frozen and has filters.
+
+```csv
+date,broker,account,type,symbol,description,quantity,price,amount,fees,currency
+2024-02-02,Fidelity,,Buy,AAPL,You Bought: APPLE INC,10.5,185.2,-1949.55,4.95,USD
+2024-02-09,Fidelity,,Sell,MSFT,You Sold: MICROSOFT CORP,-8.25,375.4,3096.98,0.07,USD
+2024-02-16,Fidelity,,Tax,NVS,Foreign Tax Paid: NOVARTIS AG SPON ADR,,,-13.23,0,USD
+2024-02-27,Fidelity,,Fee,,Wire Transfer Fee,,,-15,15,USD
+```
+
+---
+
+## Gains
+
+`--format gains`. Realized capital gains, one row per sold lot, with columns that
+follow IRS Form 8949 (columns a, b, c, d, e, h, plus the Part I / Part II split as
+`term`). With `--xlsx` the totals and the disclaimer go to a second `Summary` sheet.
+
+> **Not tax advice.** This is an estimate from the statement you convert. It does not
+> apply wash-sale rules (Form 8949 column g), and it can't know about lots, corporate
+> actions or basis adjustments that are not in the file. **Your broker's Form 1099-B is
+> authoritative.**
+
+| Column          | Form 8949 | Contents |
+| --------------- | --------- | -------- |
+| `description`   | (a) | `<quantity> sh. <symbol>`, e.g. `10 sh. AAPL`. |
+| `date_acquired` | (b) | Buy date of the lot. Blank if no earlier buy was found. |
+| `date_sold`     | (c) | Sell date. |
+| `proceeds`      | (d) | Net proceeds (commission subtracted), in cents. |
+| `cost_basis`    | (e) | Cost including the buy commission, in cents. Blank if unknown. |
+| `gain_loss`     | (h) | `proceeds - cost_basis`. Negative for a loss. Blank if the basis is unknown. |
+| `term`          | Part I / II | `short`, `long`, or `unknown` (no basis). |
+| `account`       |     | Only when at least one activity has an account. |
+
+### Lot matching
+
+1. Only BUY, SELL and SPLIT activities with a symbol are used; everything else is
+   ignored (not reported as skipped). They are processed in date order. On the same
+   date, splits come first, then buys, then sells, so a day trade matches whatever
+   order the statement lists it in. Older lots still go first (FIFO).
+2. A BUY opens a lot. Basis = the broker's total paid (`amount`) if the statement has
+   it, else quantity × price + fee.
+3. A SELL closes the oldest open lots of the same **account, symbol and currency**
+   first. Net proceeds = `amount`, else quantity × price - fee. When a sale closes
+   several lots, or part of one, proceeds are split between the rows by quantity, and a
+   partial lot's basis is split the same way. Each piece is rounded to cents and the
+   last piece gets the remainder, so the rows of one sale add up to its proceeds and the
+   rows of one lot add up to its basis exactly.
+4. A SPLIT multiplies the quantity of every open lot of that symbol (in that account) by
+   the ratio. Basis and acquisition date stay the same.
+5. **Holding period.** Long-term if held *more than one year*: the sell date is after
+   the one-year anniversary of the buy date (bought 2023-01-15: sold 2024-01-15 is
+   short-term, 2024-01-16 is long-term). A lot bought on Feb 29 has its anniversary on
+   Feb 28.
+6. **Not enough buys.** If a sale needs more shares than the open lots hold, the matched
+   part is reported normally and the rest gets a row with blank `date_acquired`,
+   `cost_basis` and `gain_loss` and term `unknown`. A warning names the sale. This is
+   what happens for shares bought before the period of a monthly statement.
+
+### Summary
+
+Printed to stderr (and written to the `Summary` sheet in XLSX), per currency:
+
+```
+Realized gains (FIFO):
+  Short-term: proceeds         760.38  cost basis         742.69  gain/loss          17.69 USD
+  Long-term:  proceeds           0.00  cost basis           0.00  gain/loss           0.00 USD
+  Total:      gain/loss 17.69 USD
+  Not included: 3,096.98 USD of proceeds with unknown cost basis (term 'unknown').
+Not tax advice. These figures are an estimate (FIFO, no wash-sale adjustments) from the statement you converted. Your broker's Form 1099-B is authoritative.
+```
+
+Totals are sums of the rounded row values, so they match the file.
+
+### Not handled
+
+Wash sales, short sales, options, mergers/spin-offs and other corporate actions apart
+from splits, transfers in with a carried-over basis, gifted or inherited shares, and
+lot elections other than FIFO (specific identification, average cost for funds). For
+those, use the 1099-B.
 
 ---
 

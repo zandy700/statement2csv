@@ -99,12 +99,29 @@ CI runs the same three commands on Python 3.11, 3.12 and 3.13.
      and the others do not accept it.
    - `tests/test_cli_e2e.py`: add the fixture to `FIXTURE_FILES`, and its activity
      count and number of deposits, withdrawals and splits to `TOTALS` and
-     `CASH_MOVEMENTS`. The parametrized tests then run it through both exporters.
+     `CASH_MOVEMENTS`. The parametrized tests then run it through every exporter.
 
 6. **Docs.** Add the broker to the table in `README.md` and to the changelog under
    "Unreleased".
 
 7. Run the tests and linters, then open a pull request using the template.
+
+## Adding an output format
+
+Exporters live in `src/statement2csv/exporters/`. Subclass `Exporter` (see `base.py`),
+set `name` and `display_name` (and optionally `aliases`, `supports_xlsx`), and add the
+class to `EXPORTERS` in `exporters/__init__.py`; the CLI picks it up from there.
+
+- For one row per activity, implement `header(activities)` and `row(activity, header)`
+  (return a string to skip the activity with that reason), as `wealthfolio.py` and
+  `spreadsheet.py` do.
+- For rows that are not one-to-one with activities, override `build(activities)` and
+  return a `Table`, as `gains.py` does. Put messages for the user in
+  `ExportResult.warnings` and `ExportResult.summary`.
+- Cells may be `str`, `Decimal`, `datetime.date` or `None`. CSV and XLSX writing is
+  shared.
+
+Document the format in `docs/formats.md` and add it to the outputs table in `README.md`.
 
 ## Conventions
 

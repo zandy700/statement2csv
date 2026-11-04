@@ -6,6 +6,28 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `spreadsheet` output format (alias `csv`): a clean, human-friendly CSV for Excel,
+  Google Sheets and Numbers with columns `date, broker, account, type, symbol,
+  description, quantity, price, amount, fees, currency`. Every activity type is kept;
+  `amount` and sell quantities are signed.
+- `gains` output format: a realized capital gains report with FIFO lot matching, in
+  Form 8949-style columns (`description, date_acquired, date_sold, proceeds,
+  cost_basis, gain_loss, term`). Handles partial lots, fees in basis and proceeds,
+  short- vs long-term holding periods, splits, and warns about sales without enough
+  earlier buys. Prints short-/long-term totals and a not-tax-advice disclaimer (the
+  broker's 1099-B is authoritative).
+- `--xlsx` option for `spreadsheet` and `gains`: writes an Excel workbook with real
+  number and date cells. Needs the new optional `xlsx` extra (openpyxl).
+
+### Changed
+
+- Positioning: statement2csv turns broker statements into clean data for spreadsheets,
+  taxes and portfolio trackers, not only Wealthfolio / Ghostfolio imports.
+- Exporters build a table that is written as CSV or XLSX. `ExportResult` has
+  `warnings` and `summary` lines, shown by the CLI.
+
 ### Fixed
 
 - `--broker AUTO` (any case) now auto-detects instead of failing as an unknown broker.

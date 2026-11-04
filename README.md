@@ -3,16 +3,21 @@
 [![CI](https://github.com/zandy700/statement2csv/actions/workflows/ci.yml/badge.svg)](https://github.com/zandy700/statement2csv/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Convert broker PDF statements and CSV exports into CSV files you can import into
-[Wealthfolio](https://wealthfolio.app) and [Ghostfolio](https://ghostfol.io).
+Turn broker statements into clean data for spreadsheets, taxes, and portfolio trackers.
+
+statement2csv reads broker PDF statements and CSV exports and writes:
+
+- a **clean spreadsheet** (CSV or Excel) for Excel, Google Sheets or Numbers,
+- a **realized capital gains report** (FIFO, laid out like IRS Form 8949),
+- **import files** for [Wealthfolio](https://wealthfolio.app) and
+  [Ghostfolio](https://ghostfol.io).
 
 ## Why
 
 Many brokers only give you monthly PDF statements, or a CSV in a layout of their own.
-Wealthfolio and Ghostfolio import CSV files with a specific set of columns, so those
-statements cannot be imported as they are. Users asked for exactly this in the
-Wealthfolio Show HN thread. statement2csv reads the statement and writes a CSV in the
-format the target app expects.
+You can't sort, filter or sum a PDF, portfolio trackers want their own CSV columns, and
+working out what you gained on each sale by hand is tedious. statement2csv reads the
+statement once into a normalized list of activities and writes it in the shape you need.
 
 ## Privacy
 
@@ -44,6 +49,10 @@ python -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 ```
 
+Excel (`.xlsx`) output needs the optional `xlsx` extra (openpyxl):
+`pipx install '.[xlsx]'`, `uv tool install '.[xlsx]'` or `pip install -e '.[xlsx]'`.
+CSV output works without it.
+
 ## Usage
 
 ```sh
@@ -57,6 +66,15 @@ statement2csv convert statement.pdf
 # Pick the broker and target app, choose the output file
 statement2csv convert statement.pdf --broker schwab --format ghostfolio -o schwab.csv
 
+# A clean CSV for Excel / Google Sheets / Numbers (statement.spreadsheet.csv)
+statement2csv convert statement.pdf -f spreadsheet      # or: -f csv
+
+# ... or a real Excel workbook (needs the xlsx extra)
+statement2csv convert statement.pdf -f spreadsheet --xlsx -o activity.xlsx
+
+# Realized capital gains (FIFO). Totals and warnings are printed to stderr.
+statement2csv convert activity.csv -f gains -o gains-2024.csv
+
 # Write to stdout (warnings and the summary go to stderr)
 statement2csv convert activity.csv -f wealthfolio -o -
 ```
@@ -67,8 +85,9 @@ Options of `convert`:
 | --- | --- |
 | `INPUT` | Broker statement (PDF or CSV export). |
 | `--broker`, `-b` | Parser name from `statement2csv brokers`, or `auto` (default) to detect it. |
-| `--format`, `-f` | `wealthfolio` (default) or `ghostfolio`. |
-| `--output`, `-o` | Output path, or `-` for stdout. Default: the input name with a `.<format>.csv` suffix. |
+| `--format`, `-f` | `wealthfolio` (default), `ghostfolio`, `spreadsheet` (alias `csv`) or `gains`. |
+| `--output`, `-o` | Output path, or `-` for stdout. Default: the input name with a `.<format>.csv` suffix (`.xlsx` with `--xlsx`). |
+| `--xlsx` | Write an Excel workbook instead of CSV. Only for `spreadsheet` and `gains`; needs the `xlsx` extra. |
 
 Rows that cannot be converted are skipped, and a warning for each one is printed to
 stderr. Read them: they tell you what is missing from the CSV. The command exits with
@@ -88,15 +107,70 @@ Known gaps: Fidelity's core money-market sweep rows are ignored. Schwab's older 
 ACATS rows are skipped. Details are in the docstring at the top of each parser in
 `src/statement2csv/parsers/`.
 
-## Output formats
+## Supported outputs
 
-| Format | Notes |
-| --- | --- |
-| `wealthfolio` | Canonical Wealthfolio column names, so the import wizard maps them automatically. |
-| `ghostfolio` | Ghostfolio has no deposit, withdrawal or split activities, so those rows are skipped. Tax rows are written as `fee`. |
+| `--format` | For | Columns | XLSX | Notes |
+| --- | --- | --- | --- | --- |
+| `spreadsheet` (alias `csv`) | Excel, Google Sheets, Numbers, pandas | `date, broker, account, type, symbol, description, quantity, price, amount, fees, currency` | yes | Every activity, one row each. `amount` is signed (negative = money out) and sell quantities are negative, so a column sum gives net cash flow / net shares bought. |
+| `gains` | Taxes (Form 8949 / Schedule D prep) | `description, date_acquired, date_sold, proceeds, cost_basis, gain_loss, term` | yes | Realized gains with FIFO lot matching. Prints short- and long-term totals. **Not tax advice**, see below. |
+| `wealthfolio` | [Wealthfolio](https://wealthfolio.app) import | canonical Wealthfolio names | no | The import wizard maps every column automatically. |
+| `ghostfolio` | [Ghostfolio](https://ghostfol.io) import | Ghostfolio sample header | no | Ghostfolio has no deposit, withdrawal or split activities, so those rows are skipped. Tax rows are written as `fee`. |
 
 What each file contains, and why, is documented in [docs/formats.md](docs/formats.md).
-Always review the import preview in the target app before confirming.
+For the import formats, always review the import preview in the target app before
+confirming.
+
+### Spreadsheet example
+
+```csv
+date,broker,account,type,symbol,description,quantity,price,amount,fees,currency
+2024-01-10,Robinhood,,Buy,AAPL,Apple,40,185.5,-7420,0,USD
+2024-02-15,Robinhood,,Dividend,AAPL,Cash Div: ...,,,9.6,0,USD
+2024-02-20,Robinhood,,Sell,AAPL,Apple,-30,182.31,5469.18,0.12,USD
+```
+
+With `--xlsx`, numbers and dates are real Excel numbers and dates, the header row is
+frozen and filters are on.
+
+### Capital gains report
+
+```sh
+$ statement2csv convert activity.csv -f gains -o gains.csv
+Robinhood: wrote 2 sale lots to gains.csv (Realized gains (FIFO) format)
+Realized gains (FIFO):
+  Short-term: proceeds      13,972.97  cost basis      13,334.40  gain/loss         638.57 USD
+  Long-term:  proceeds           0.00  cost basis           0.00  gain/loss           0.00 USD
+  Total:      gain/loss 638.57 USD
+Not tax advice. ...
+```
+
+```csv
+description,date_acquired,date_sold,proceeds,cost_basis,gain_loss,term
+30 sh. AAPL,2024-01-10,2024-02-20,5469.18,5565.00,-95.82,short
+20 sh. MSFT,2024-01-12,2024-03-22,8503.79,7769.40,734.39,short
+```
+
+How it is computed:
+
+- Each sell is matched to the oldest open buys of the same symbol (same account and
+  currency) first: **FIFO**. A sale that closes several lots, or part of one, gets one
+  row per lot.
+- Buy commissions are added to the cost basis; sell commissions are subtracted from the
+  proceeds.
+- **Long-term** means held more than one year (sold after the one-year anniversary of
+  the purchase), otherwise **short-term**.
+- Splits in the converted statements rescale open lots.
+- `convert` reads one file, so only buys in that file are known. A sale of shares bought
+  before the period the file covers gets a row with a blank cost basis and term
+  `unknown`, a warning is printed, and its proceeds are left out of the totals. Take
+  the basis for those rows from your 1099-B. A broker export that covers your whole
+  history (e.g. a full Robinhood activity CSV) avoids this.
+
+> [!WARNING]
+> **This is not tax advice.** The gains report is an estimate from the statements you
+> give it. It does not apply wash-sale rules, specific-lot or average-cost elections,
+> corporate actions other than splits, or adjustments your broker makes. **Your broker's
+> Form 1099-B is authoritative.** Use it, or a tax professional, to file.
 
 ## Limitations
 
@@ -113,6 +187,9 @@ Always review the import preview in the target app before confirming.
 - Amounts are assumed to be in USD; all three parsers write `USD`.
 - Only the broker's reported activity is converted; there is no portfolio
   reconciliation.
+- `convert` reads one file at a time, so the gains report only sees buys in that file.
+  Sales of shares bought earlier have no cost basis (see
+  [Capital gains report](#capital-gains-report)).
 - If a statement fails or converts wrongly, please
   [open an issue](https://github.com/zandy700/statement2csv/issues/new/choose) with a **redacted**
   sample. Remove names, addresses and account numbers, and change the amounts.
