@@ -2,7 +2,7 @@
 
 See docs/formats.md#gains.
 
-NOT TAX ADVICE. This is an estimate from the activities in the statements you
+NOT TAX ADVICE. This is an estimate from the activities in the statement you
 convert. Your broker's Form 1099-B is authoritative; use it to file.
 
 How it works:
@@ -18,8 +18,9 @@ How it works:
 * A SPLIT multiplies the open lots' share counts by the ratio; basis is unchanged.
 * A sale is long-term when the shares were held more than one year: sold after the
   one-year anniversary of the purchase date.
-* Shares sold without enough earlier buys (usually bought before the first statement
-  you converted) get a row with a blank date acquired, basis and gain, and a warning.
+* Shares sold without enough earlier buys in the input (usually bought before the
+  period the statement covers) get a row with a blank date acquired, basis and gain,
+  term ``unknown``, and a warning.
 
 Not handled: wash sales, short sales, options, corporate actions other than splits,
 gifted or inherited shares, and specific-lot elections other than FIFO.
@@ -51,7 +52,7 @@ SHORT, LONG, UNKNOWN = "short", "long", "unknown"
 
 DISCLAIMER = (
     "Not tax advice. These figures are an estimate (FIFO, no wash-sale adjustments) from "
-    "the statements you converted. Your broker's Form 1099-B is authoritative."
+    "the statement you converted. Your broker's Form 1099-B is authoritative."
 )
 
 ZERO = Decimal(0)
@@ -203,8 +204,8 @@ def match_fifo(activities: Iterable[Activity]) -> tuple[list[Disposal], list[str
             bought = f"only {fmt_decimal(matched)} shares were" if matched else "no shares were"
             warnings.append(
                 f"SELL {fmt_decimal(a.quantity)} {a.symbol} on {a.date}{where}: {bought} "
-                f"bought earlier in the converted statements, so {fmt_decimal(remaining)} "
-                "shares have no cost basis. Convert earlier statements too, or take the "
+                f"bought earlier in this file, so {fmt_decimal(remaining)} shares have no "
+                "cost basis (probably bought before this statement's period). Take their "
                 "basis from your 1099-B."
             )
             disposals.append(Disposal(a, remaining, None, unallocated, None))
