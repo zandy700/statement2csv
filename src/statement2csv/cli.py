@@ -74,7 +74,8 @@ def convert(
             "--output",
             "-o",
             dir_okay=False,
-            help="Output path ('-' for stdout). Default: INPUT with a .<format>.csv suffix.",
+            help="Output path ('-' for stdout). Default: INPUT with a .<format>.csv suffix "
+            "(.xlsx with --xlsx).",
         ),
     ] = None,
     xlsx: Annotated[

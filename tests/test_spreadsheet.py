@@ -122,3 +122,8 @@ def test_xlsx_has_typed_cells(tmp_path: Path) -> None:
 def test_xlsx_rejected_for_import_formats(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="CSV only"):
         get_exporter("wealthfolio").export_xlsx([], tmp_path / "x.xlsx")
+
+
+def test_reverse_split_description() -> None:
+    lines = export([act(1, "SPLIT", symbol="XYZ", amount=D(1) / D(3))])
+    assert lines[1].split(",")[5] == "1-for-3 reverse split"

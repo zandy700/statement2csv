@@ -57,6 +57,9 @@ DISCLAIMER = (
 
 ZERO = Decimal(0)
 CENT = Decimal("0.01")
+#: Lot quantities are rounded to this after a split, so a repeating ratio such as
+#: 1/3 = 0.333... doesn't leave 1e-28 shares behind. Brokers report far fewer decimals.
+SHARE_STEP = Decimal("1e-10")
 
 # Same-day processing order: open lots before closing them.
 _ORDER = {ActivityType.SPLIT: 0, ActivityType.BUY: 1, ActivityType.SELL: 2}
@@ -172,7 +175,9 @@ def match_fifo(activities: Iterable[Activity]) -> tuple[list[Disposal], list[str
             for (account, symbol, _), queue in lots.items():
                 if account == a.account and symbol == a.symbol:
                     for lot in queue:
-                        lot.quantity *= a.amount
+                        lot.quantity = (lot.quantity * a.amount).quantize(
+                            SHARE_STEP, rounding=ROUND_HALF_UP
+                        )
             continue
 
         key = (a.account, a.symbol, a.currency)

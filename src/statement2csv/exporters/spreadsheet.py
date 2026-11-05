@@ -57,6 +57,14 @@ def signed_amount(activity: Activity) -> Decimal | None:
     return -amount if t in _CASH_OUT else amount
 
 
+def split_description(ratio: Decimal) -> str:
+    """``2`` -> ``2-for-1 split``, ``1/3`` -> ``1-for-3 reverse split``."""
+    places = Decimal("1e-6")
+    if ratio >= 1:
+        return f"{fmt_decimal(ratio.quantize(places))}-for-1 split"
+    return f"1-for-{fmt_decimal((1 / ratio).quantize(places))} reverse split"
+
+
 class SpreadsheetExporter(Exporter):
     name = "spreadsheet"
     display_name = "Spreadsheet"
@@ -79,8 +87,8 @@ class SpreadsheetExporter(Exporter):
         elif not description:
             # Keep per-share details (e.g. of a dividend) without putting a non-trade
             # quantity in the column people sum to get positions.
-            if t is ActivityType.SPLIT and activity.amount is not None:
-                description = f"{fmt_decimal(activity.amount)}-for-1 split"
+            if t is ActivityType.SPLIT and activity.amount:
+                description = split_description(activity.amount)
             elif activity.quantity is not None and activity.unit_price is not None:
                 description = (
                     f"{fmt_decimal(activity.quantity)} shares x {fmt_decimal(activity.unit_price)}"

@@ -32,7 +32,7 @@ table is written as an Excel workbook (needs the `xlsx` extra).
 | `account`     | Account name if the parser provides one, else blank. Always present so the columns don't move. |
 | `type`        | `Buy`, `Sell`, `Dividend`, `Interest`, `Fee`, `Tax`, `Deposit`, `Withdrawal`, `Split`. |
 | `symbol`      | Ticker or CUSIP, blank for pure cash rows. |
-| `description` | The broker's description. If there is none: `N-for-1 split` for splits, `Q shares x P` for per-share dividends. |
+| `description` | The broker's description. If there is none: `N-for-1 split` (or `1-for-N reverse split`) for splits, `Q shares x P` for per-share dividends. |
 | `quantity`    | **Signed** change in shares: positive for buys, negative for sells. Blank on every other type. |
 | `price`       | Price per share for buys and sells, blank otherwise. |
 | `amount`      | **Signed** cash effect, fees included: negative for buys (total paid), withdrawals, fees and taxes; positive for sells (net proceeds), deposits, dividends and interest. The broker's own total is used when the statement has one, else quantity × price ± fee. Blank for splits (the ratio is not cash). |
@@ -78,7 +78,7 @@ follow IRS Form 8949 (columns a, b, c, d, e, h, plus the Part I / Part II split 
 | `cost_basis`    | (e) | Cost including the buy commission, in cents. Blank if unknown. |
 | `gain_loss`     | (h) | `proceeds - cost_basis`. Negative for a loss. Blank if the basis is unknown. |
 | `term`          | Part I / II | `short`, `long`, or `unknown` (no basis). |
-| `account`       |     | Only when at least one activity has an account. |
+| `account`       |     | Only when at least one sale has an account. |
 
 ### Lot matching
 
@@ -95,7 +95,8 @@ follow IRS Form 8949 (columns a, b, c, d, e, h, plus the Part I / Part II split 
    last piece gets the remainder, so the rows of one sale add up to its proceeds and the
    rows of one lot add up to its basis exactly.
 4. A SPLIT multiplies the quantity of every open lot of that symbol (in that account) by
-   the ratio. Basis and acquisition date stay the same.
+   the ratio, rounded to 10 decimal places (so a 1-for-3 ratio of 0.333... doesn't leave
+   a sliver of a share). Basis and acquisition date stay the same.
 5. **Holding period.** Long-term if held *more than one year*: the sell date is after
    the one-year anniversary of the buy date (bought 2023-01-15: sold 2024-01-15 is
    short-term, 2024-01-16 is long-term). A lot bought on Feb 29 has its anniversary on

@@ -329,3 +329,25 @@ def test_registered_and_xlsx(tmp_path: Path) -> None:
     assert ws["D2"].number_format == "#,##0.00"
     summary = [r[0] for r in wb["Summary"].iter_rows(values_only=True)]
     assert summary[-1] == DISCLAIMER
+
+
+def test_reverse_split_with_repeating_ratio_leaves_no_dust() -> None:
+    # Robinhood stores a 1-for-3 reverse split as new/old = 0.333...; 3 shares become
+    # 0.999... unless the lot quantity is rounded after the split.
+    _, rows, result = report(
+        [
+            buy("2024-01-02", 3, 10),
+            Activity(
+                date=dt.date(2024, 3, 1),
+                activity_type=ActivityType.SPLIT,
+                symbol="AAPL",
+                amount=D(1) / D(3),
+                currency="USD",
+            ),
+            sell("2024-04-01", 1, 40),
+        ]
+    )
+    assert cols(rows, "description", "proceeds", "cost_basis", "term") == [
+        ("1 sh. AAPL", "40.00", "30.00", "short")
+    ]
+    assert not result.warnings
